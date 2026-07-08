@@ -1,0 +1,111 @@
+@use '../abstracts' as *;
+@use '../global';
+
+.site-footer{
+    @include fluid(padding-block-start, 70px, 125px);
+    @include fluid(padding-block-end, 30px, 42px);
+    background-color: $color-gray;
+
+    .footer_title{
+        color: $color-text-primary;
+        h2{
+            margin: 0px;
+            @include fluid(padding-block-end, 24px, 36px);
+        }
+    }
+    
+    a{
+        color: $color-text;
+    }
+    li{
+        a{
+            transition: 0.3s ease;
+        }
+        &:not(.menu-item-has-children){
+            a{
+                &:hover{
+                    opacity: 0.8;
+                }
+            }
+        }
+    }
+    .footerNavigation{
+        @include fluid(padding-block-start, 24px, 35px);
+        @include fluid(padding-block-end, 100px, 156px);
+        gap: rem(50px);
+        align-items: start;
+        .footerNav{
+            gap: rem(40px);
+            align-items: start;
+            & > .flex{
+                @include fluid(gap, 10px, 14px);
+                flex-direction: column;
+                ul{
+                    gap: rem(12px);
+                }
+                
+            }
+            .navTitle{
+                @include fluid-type(20px, 24px);                
+                color: $color-text-primary;
+            }
+        }
+        @include bp('md'){
+            
+            .footerNav{
+                justify-content: end;
+                flex: 0 1 auto;
+            }
+            .footer_cta{
+                flex: 0 0 auto;
+            }
+        }
+        @include bp('lg'){
+            .footerNav{
+                margin-inline-start: auto;
+            }
+        }
+    }
+    .footerBottom{
+        & > .flex{
+            gap: 50px;            
+            justify-content: space-between;
+            @include bp('lg'){
+                flex-wrap: nowrap;
+            }
+        }
+        
+    }
+    .footerBranding{
+        @include fluid(gap, 30px, 56px);
+        img{
+            max-width: 45%;
+        }
+    }
+    .footerLegalMenu{
+        ul{
+            row-gap: 10px;
+            flex-direction: column;
+            font-size: 90%;
+        }
+            
+    }
+    @include bp('sm'){
+        .footerLegalMenu{
+            ul{
+                font-size: 100%;
+                flex-direction: row;
+                // @include fluid(gap, 30px, 56px);
+                column-gap: clamp(20px, 2.9166666666666665vw, rem(56px));
+            }
+        }        
+    }
+    @include bp('lg'){
+        .footerBranding{
+            img{
+                max-width: 100%;
+            }
+        }
+    }
+    
+}

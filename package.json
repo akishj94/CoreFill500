@@ -1,0 +1,29 @@
+{
+  "name": "corefill500-markup",
+  "version": "1.0.0",
+  "description": "Static HTML markup for CoreFill500 (CMS-agnostic, GSAP + Lenis).",
+  "main": "index.js",
+  "scripts": {
+    "js": "esbuild src/js/index.js --bundle --sourcemap --outfile=assets/js/main.js",
+    "css": "sass src/scss/main.scss assets/css/main.css --source-map",
+    "js:prod": "esbuild src/js/index.js --bundle --minify --outfile=assets/js/main.js",
+    "css:prod": "sass src/scss/main.scss assets/css/main.css --style=compressed --no-source-map",
+    "js:watch": "npm run js -- --watch",
+    "css:watch": "sass --watch src/scss:assets/css",
+    "build": "npm-run-all js:prod css:prod css:blog:prod",
+    "watch": "npm-run-all --parallel js:watch css:watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "esbuild": "^0.28.0",
+    "npm-run-all": "^4.1.5",
+    "sass": "^1.99.0"
+  },
+  "dependencies": {
+    "gsap": "^3.15.0",
+    "lenis": "^1.3.23"
+  }
+}

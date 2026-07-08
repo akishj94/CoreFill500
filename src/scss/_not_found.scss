@@ -1,0 +1,35 @@
+@use 'abstracts' as *;
+@use 'global' as *;
+
+
+.error404{
+    &>main{
+        background-color: $color-light-gray;
+        min-height: 100lvh;
+        display: grid;
+        align-items: center;
+        position: relative;
+        background-image: url('../../assets/images/shri_bg_cta.webp');
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: right bottom;
+        &:before{
+            content: '';
+            position: absolute;
+            width: 50%;
+            height: 50%;
+            z-index: -1;
+            pointer-events: none;
+            background-image: url('../../assets/images/shri_logo_icon.svg');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            margin: auto;
+            left: 0;
+            right: 0;
+        }
+    }
+    .site-footer{
+        display: none;
+    }
+}

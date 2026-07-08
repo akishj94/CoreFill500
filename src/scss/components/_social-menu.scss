@@ -1,0 +1,100 @@
+// =============================================================================
+// social-menu.scss — Single-file SCSS module for .shri_social_menu
+// =============================================================================
+
+
+// -----------------------------------------------------------------------------
+// Tokens — override these before enqueueing if needed
+// -----------------------------------------------------------------------------
+
+$social-menu-gap:           1rem                       !default;
+$social-menu-icon-size:     clamp(14px, 1.042vw, 18px) !default;
+$social-menu-color:         currentColor               !default;
+$social-menu-bg:            transparent                !default;
+$social-menu-hover-color:   #FF3B00                    !default;
+$social-menu-hover-bg:      transparent                !default;
+$social-menu-focus-outline: 2px solid currentColor     !default;
+$social-menu-focus-offset:  2px                        !default;
+$social-menu-transition:    color 0.18s ease           !default;
+
+
+// -----------------------------------------------------------------------------
+// Component
+// -----------------------------------------------------------------------------
+
+.shri_social_menu {
+    display:     flex;
+    flex-wrap:   wrap;
+    align-items: center;
+    gap:         $social-menu-gap;
+    list-style:  none;
+    margin:      0;
+    padding:     0;
+
+    &__item {
+        margin:  0;
+        padding: 0;
+    }
+
+    &__link {
+        display:          inline-flex;
+        align-items:      center;
+        justify-content:  center;
+        background-color: $social-menu-bg;
+        color:            $social-menu-color;
+        text-decoration:  none;
+        transition:       $social-menu-transition;
+        line-height:      1;
+
+        &:hover,
+        &:active {
+            color:            $social-menu-hover-color;
+            background-color: $social-menu-hover-bg;
+            text-decoration:  none;
+        }
+
+        // WCAG 2.4.11 — visible focus for keyboard users
+        &:focus-visible {
+            outline:        $social-menu-focus-outline;
+            outline-offset: $social-menu-focus-offset;
+            border-radius:  2px;
+        }
+
+        // Remove default ring for pointer users
+        &:focus:not(:focus-visible) {
+            outline: none;
+        }
+    }
+
+    &__icon {
+        width:          $social-menu-icon-size;
+        height:         $social-menu-icon-size;
+        fill:           currentColor;
+        flex-shrink:    0;
+        pointer-events: none;
+    }
+
+    // Visually hidden — screen readers only
+    &__label {
+        position:    absolute;
+        width:       1px;
+        height:      1px;
+        padding:     0;
+        margin:      -1px;
+        overflow:    hidden;
+        clip:        rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border:      0;
+    }
+}
+
+
+// -----------------------------------------------------------------------------
+// Reduced-motion
+// -----------------------------------------------------------------------------
+
+@media (prefers-reduced-motion: reduce) {
+    .shri_social_menu__link {
+        transition: none;
+    }
+}

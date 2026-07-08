@@ -1,0 +1,125 @@
+@use "sass:map";
+@use "sass:math";
+
+// ─── Tokens ───────────────────────────────────────────────────────────────────
+
+$base-font-size: 16;
+
+$color-gray: #DBDBDB;
+$color-primary: #AA1A2D;
+$color-bg:   #570010;
+$color-text: #000000;
+$color-text-primary: #830018;
+$color-text-gray: #797979;
+$color-border: #707070;
+
+$container-mobile: calc(100% - 30px);
+$container-tablet: calc(100% - 30px);
+$container-desktop: 1400px;
+$container-xl: 1960px;
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('../fonts/Satoshi-Variable.woff2') format('woff2'),
+       url('../fonts/Satoshi-Variable.woff') format('woff');
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('../fonts/Satoshi-VariableItalic.woff2') format('woff2'),
+       url('../fonts/Satoshi-VariableItalic.woff') format('woff');
+  font-weight: 300 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+$font-primary: 'Satoshi', sans-serif;
+$ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+// ─── Functions ────────────────────────────────────────────────────────────────
+
+// Strip unit (modern)
+@function strip-unit($number) {
+  @return math.div($number, ($number * 0 + 1));
+}
+
+// PX → REM converter
+@function rem($value, $base: $base-font-size) {
+  @if math.is-unitless($value) {
+    @return math.div($value, $base) * 1rem;
+  }
+
+  @if math.unit($value) == "px" {
+    @return math.div(strip-unit($value), $base) * 1rem;
+  }
+
+  @error "rem() only accepts px or unitless values. Got: #{$value}";
+}
+
+$border-radius: rem(20px);
+
+// ─── Breakpoints ──────────────────────────────────────────────────────────────
+
+$breakpoints: (
+  'xs':  400px,
+  'sm':  480px,
+  'md':  768px,
+  'lg':  1024px,
+  'xl':  1440px,
+);
+
+@mixin bp($key) {
+  $value: map.get($breakpoints, $key);
+
+  @if $value == null {
+    @error "Breakpoint `#{$key}` not found.";
+  }
+
+  @media (min-width: $value) {
+    @content;
+  }
+}
+
+// ─── Fluid type ───────────────────────────────────────────────────────────────
+
+// Font-size specific
+@mixin fluid-type($min-size, $max-size, $min-width: 375px, $max-width: 1440px) {
+  font-size: clamp(
+    rem($min-size),
+    calc(
+      #{rem($min-size)} +
+      #{strip-unit($max-size - $min-size)} *
+      ((100vw - #{$min-width}) / #{strip-unit($max-width - $min-width)})
+    ),
+    rem($max-size)
+  );
+}
+
+// Generic fluid property
+@mixin fluid($property, $min-size, $max-size, $min-width: 375px, $max-width: 1440px) {
+  #{$property}: clamp(
+    rem($min-size),
+    calc(
+      #{rem($min-size)} +
+      #{strip-unit($max-size - $min-size)} *
+      ((100vw - #{$min-width}) / #{strip-unit($max-width - $min-width)})
+    ),
+    rem($max-size)
+  );
+}
+
+// ─── Optional Helpers ─────────────────────────────────────────────────────────
+
+// Apply rem to multiple values (fixed append deprecation-safe)
+@mixin rem-prop($property, $values...) {
+  $result: ();
+
+  @each $val in $values {
+    $result: append($result, rem($val));
+  }
+
+  #{$property}: $result;
+}

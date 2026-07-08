@@ -1,0 +1,24 @@
+@use '../abstracts' as *;
+.container {
+  max-width: $container-mobile;
+  margin: auto;
+  width: 100%;
+
+  @include bp('md') { max-width: $container-tablet; }
+  @include bp('lg') { max-width: $container-desktop; padding-inline: 60px; }
+  @include bp('xl') { max-width: $container-xl;    padding-inline: 110px; }
+}
+
+.container_fluid{
+  max-width: $container-mobile;
+  margin: auto;
+  width: 100%;
+}
+.container_medium{
+  @include bp('lg'){
+    max-width: calc(54rem + 30px);
+  }
+  margin: auto;
+  width: 100%;
+  padding-inline: 15px;
+}
