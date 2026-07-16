@@ -10,7 +10,7 @@
     "css:prod": "sass src/scss/main.scss assets/css/main.css --style=compressed --no-source-map",
     "js:watch": "npm run js -- --watch",
     "css:watch": "sass --watch src/scss:assets/css",
-    "build": "npm-run-all js:prod css:prod css:blog:prod",
+    "build": "npm-run-all js:prod css:prod",
     "watch": "npm-run-all --parallel js:watch css:watch"
   },
   "keywords": [],
