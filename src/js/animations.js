@@ -21,6 +21,7 @@ function fixNestedInlineTags(container) {
 export function setInitialStates() {
 
   const fadeUp = document.querySelectorAll('.fade-up');
+  console.log('asdas');
   if (fadeUp.length) gsap.set(fadeUp, { opacity: 0, y: 40 });
 
   const fadeIn = document.querySelectorAll('.fade-in');
@@ -185,5 +186,5 @@ export function initScrollAnimations() {
         },
       });
     });
-  });
+  });  
 }

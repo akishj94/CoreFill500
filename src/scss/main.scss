@@ -1,13 +1,14 @@
-// Order matters: abstracts first (no output), then base, then components
 @use 'abstracts' as *;  
 @use 'base';
 @use 'global';
 @use 'components/container';
 @use 'components/button';
 
-// @use 'components/nav';
+@use 'components/nav';
 @use 'components/footer';
 @use 'components/social-menu';
 
 @use 'home';
 // @use 'not_found';
+@import "../../node_modules/swiper/swiper.css";
+@import "../../node_modules/swiper/modules/navigation.css";

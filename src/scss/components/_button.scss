@@ -28,7 +28,7 @@
   }
   &.solid{
       &.gray{
-      background-color: $color-gray;
+      background-color: $color-button-gray;
       color: white;
     }
   }
@@ -46,21 +46,21 @@
 
 @mixin hamburger_button(
     $border-radius: rem(10px),
-    $gap: 5px,
-    $width: 42px,
-    $height: 42px,
-    $padding: 8px,
-    $span-border: 1.5px dashed #000000
+    $gap: rem(9px),
+    $width: 62px,
+    $height: 62px,
+    $padding: rem(13px),
+    $span-border: 1.5px dashed #FFFFFF
 ) {
     display: flex;
     flex-direction: column;
     justify-content: center;
     border-radius: $border-radius;
-    background-color: white;
+    background-color: $color-primary;
     gap: $gap;
-    width: $width;
-    height: $height;
-    padding: $padding;
+    @include fluid(width, 46px, 62px);
+    @include fluid(height, 46px, 62px);
+    @include fluid(padding, 10px, 13px);
     border: none;
     cursor: pointer;
 
@@ -69,6 +69,10 @@
         width: 100%;
         border: $span-border;
         transform-origin: center;
+    }
+    svg{
+      width: 100%;
+      height: 100%;
     }
 }
 
@@ -88,5 +92,25 @@
         .hover-text__inner {
             transform: translateY(-1.8em);
         }
+    }
+}
+
+.swiper-controls{
+    @include fluid(width, 46px, 52px);
+    border-radius: calc($border-radius / 2);
+    background-color: $color-primary;
+    color: white;
+    transition: 0.35s ease background-color;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1/1;
+    &:hover{
+      background-color: $color-bg;
+    }
+    &.swiper-prev{
+      svg{
+        transform: rotate(180deg);
+      }
     }
 }

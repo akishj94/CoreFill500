@@ -7,6 +7,12 @@
   @include bp('md') { max-width: $container-tablet; }
   @include bp('lg') { max-width: $container-desktop; padding-inline: 60px; }
   @include bp('xl') { max-width: $container-xl;    padding-inline: 110px; }
+  &._left_aligned{    
+    padding-inline-end: 0px;
+    @include bp('md'){
+      max-width: none;
+    }
+  }
 }
 
 .container_fluid{

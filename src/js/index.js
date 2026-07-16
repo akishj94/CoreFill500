@@ -4,6 +4,10 @@ import Lenis from 'lenis';
 import { setInitialStates, initScrollAnimations } from './animations';
 gsap.registerPlugin(ScrollTrigger);
 
+import Swiper from 'swiper';
+import { Navigation } from 'swiper/modules';
+// import Swiper and modules styles
+
 function initLenis(){
     const lenis = new Lenis({
     duration: 1.2,
@@ -80,3 +84,69 @@ const ScrollLock = ( function () {
     return { registerLenis, lock, unlock };
 
 } )();
+
+
+function hoverFollower() {
+    const table = document.querySelector(".dwnld_table");
+    if (!table) return;
+
+    const bg = table.querySelector(".highlighter");
+    const rows = table.querySelectorAll(".table_row");
+
+    let activeRow = null;
+
+    const syncPosition = (row, animate = false) => {
+        const vars = {
+            top: row.offsetTop,
+            height: row.offsetHeight,
+            overwrite: "auto"
+        };
+        animate
+            ? gsap.to(bg, { ...vars, duration: 0.5, ease: "expo.out" })
+            : gsap.set(bg, vars);
+    };
+
+    // Initial state
+    gsap.set(bg, { top: 0, height: rows[0]?.offsetHeight || 0, opacity: 0 });
+
+    rows.forEach((row) => {
+        row.addEventListener("pointerenter", () => {
+            activeRow = row;
+            syncPosition(row, true);
+            gsap.to(bg, { opacity: 1, duration: 0.5, ease: "expo.out", overwrite: "auto" });
+        });
+    });
+
+    table.addEventListener("pointerleave", () => {
+        activeRow = null;
+        gsap.to(bg, { opacity: 0, duration: 0.1, overwrite: "auto", ease: 'none' });
+    });
+
+    ScrollTrigger.addEventListener("refresh", () => {
+        if (activeRow) {
+            syncPosition(activeRow);
+        } else {
+            gsap.set(bg, { height: rows[0]?.offsetHeight || 0 });
+        }
+    });
+}
+
+function aia_slider(){    
+
+    const swiper = new Swiper('.aia_spec .swiper', {
+        modules: [Navigation],
+        slidesPerView: 'auto',
+        spaceBetween: 20,
+        navigation: {
+            nextEl: '.swiper-next',
+            prevEl: '.swiper-prev',
+        },       
+    });
+}
+setInitialStates();
+document.addEventListener('DOMContentLoaded', ()=>{
+    initLenis();    
+    hoverFollower();
+    aia_slider();
+    initScrollAnimations();
+});

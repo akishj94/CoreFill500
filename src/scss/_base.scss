@@ -77,6 +77,22 @@ h4{
 h5{
   @include fluid-type(18px, 25px, 768px, 1368px);
 }
+h6{
+  @include fluid-type(16px, 22px, 768px, 1368px);
+}
+.text-sm{
+  @include fluid-type(16px, 20px, 768px, 1368px);
+}
+.text-md{
+  @include fluid-type(16px, 22px, 768px, 1368px);
+}
+
+.text-lg{
+  @include fluid-type(18px, 25px, 768px, 1368px);
+}
+.text-xl{
+  @include fluid-type(22px, 30px, 768px, 1368px);
+}
 .screen-reader-text {
 	position:    absolute;
 	width:       1px;
