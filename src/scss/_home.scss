@@ -81,6 +81,7 @@
 }
 .home_slider_xl{
     color: white;
+    @include fluid(margin-block, 52px, 72px);
     .swiper-controls_wrapper{
         gap: 6px;
         position: absolute;       
