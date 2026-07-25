@@ -12370,11 +12370,12 @@
     "src/js/index.js"() {
       init_gsap();
       init_ScrollTrigger();
+      init_Observer();
       init_lenis();
       init_animations();
       init_swiper();
       init_modules();
-      gsapWithCSS.registerPlugin(ScrollTrigger2);
+      gsapWithCSS.registerPlugin(ScrollTrigger2, Observer);
       function initLenis() {
         const lenis = new Lenis({
           duration: 1.2,
@@ -12388,7 +12389,45 @@
           lenis.raf(time * 1e3);
         });
         gsapWithCSS.ticker.lagSmoothing(0);
+        ScrollLock.registerLenis(lenis);
+        return lenis;
       }
+      var ScrollLock = /* @__PURE__ */ (function() {
+        let scrollY = 0;
+        let lockCount = 0;
+        let lenisInstance = null;
+        function registerLenis(lenis) {
+          lenisInstance = lenis;
+        }
+        function lock() {
+          lockCount++;
+          if (lockCount > 1) return;
+          if (lenisInstance) {
+            lenisInstance.stop();
+          } else {
+            scrollY = window.scrollY;
+            document.body.style.overflow = "hidden";
+            document.body.style.position = "fixed";
+            document.body.style.top = `-${scrollY}px`;
+            document.body.style.width = "100%";
+          }
+        }
+        function unlock() {
+          if (lockCount <= 0) return;
+          lockCount--;
+          if (lockCount > 0) return;
+          if (lenisInstance) {
+            lenisInstance.start();
+          } else {
+            document.body.style.overflow = "";
+            document.body.style.position = "";
+            document.body.style.top = "";
+            document.body.style.width = "";
+            window.scrollTo(0, scrollY);
+          }
+        }
+        return { registerLenis, lock, unlock };
+      })();
       function hoverFollower() {
         const table = document.querySelector(".dwnld_table");
         if (!table) return;
@@ -12438,6 +12477,7 @@
         const frames = document.querySelector("canvas");
         const context3 = frames.getContext("2d");
         const setCanvasSize = () => {
+          console.log("S");
           const pixelRatio = window.devicePixelRatio || 1;
           frames.width = window.innerWidth * pixelRatio;
           frames.height = window.innerHeight * pixelRatio;
@@ -12446,8 +12486,8 @@
           context3.scale(pixelRatio, pixelRatio);
         };
         setCanvasSize();
-        const frameCount = 153;
-        const currentFrame = (index) => `assets/sequence/ezgif-frame-${(index + 1).toString().padStart(3, "0")}.jpg`;
+        const frameCount = 122;
+        const currentFrame = (index) => `assets/sequence/frame_${(index + 1).toString().padStart(4, "0")}.jpeg`;
         let images = [];
         let videoFrames2 = { frame: 0 };
         let imagesToLoad = frameCount;
@@ -12473,26 +12513,130 @@
           context3.clearRect(0, 0, canvasWidth, canvasHeight);
           const img = images[videoFrames2.frame];
           if (img && img.complete && img.naturalWidth > 0) {
-            const drawWidth = img.naturalWidth;
-            const drawHeight = img.naturalHeight;
-            const drawX = (canvasWidth - drawWidth) / 2;
-            const drawY = (canvasHeight - drawHeight) / 2;
-            context3.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+            const imageAspect = img.naturalWidth / img.naturalHeight;
+            const canvasAspect = canvasWidth / canvasHeight;
+            let drawWdith, drawHeight, drawX, drawY;
+            if (imageAspect > canvasAspect) {
+              drawHeight = canvasHeight;
+              drawWdith = drawHeight * imageAspect;
+              drawX = (canvasWidth - drawWdith) / 2;
+              drawY = 0;
+            } else {
+              drawWdith = canvasWidth;
+              drawHeight = drawWdith / imageAspect;
+              drawX = 0;
+              drawY = (canvasHeight - drawHeight) / 2;
+            }
+            context3.drawImage(img, drawX, drawY, drawWdith, drawHeight);
           }
         };
         const setupScrollTrigger = () => {
+          const contentBlock = document.querySelector(".cotent-block");
+          const fadeOverlay = document.querySelector(".fadeOverlay");
+          const panels = gsapWithCSS.utils.toArray(".panelWrap .panel");
+          let isDesktopViewport = false;
+          const mm = gsapWithCSS.matchMedia();
+          mm.add("(min-width: 768px)", () => {
+            isDesktopViewport = true;
+            return () => {
+              isDesktopViewport = false;
+            };
+          });
+          gsapWithCSS.set(contentBlock, { opacity: 0, scale: 1.3, transformOrigin: "center center" });
+          gsapWithCSS.set(fadeOverlay, { opacity: 0 });
+          const sequenceEnd = 0.6;
+          const scaleEnd = 0.85;
+          const overlayTl = gsapWithCSS.timeline({ paused: true }).to(fadeOverlay, { opacity: 1, duration: 0.6, ease: "power1.out" });
+          let overlayShown = false;
+          let scaleLocked = false;
+          let panelIndex = 0;
+          let animating = false;
+          function goToPanel(nextIndex, direction) {
+            animating = true;
+            const current = panels[panelIndex];
+            const next = panels[nextIndex];
+            gsapWithCSS.to(current, { opacity: 0, y: direction === 1 ? -40 : 40, duration: 0.5, ease: "power2.inOut" });
+            gsapWithCSS.fromTo(
+              next,
+              { opacity: 0, y: direction === 1 ? 40 : -40 },
+              {
+                opacity: 1,
+                y: 0,
+                duration: 0.5,
+                ease: "power2.inOut",
+                onComplete: () => {
+                  animating = false;
+                }
+              }
+            );
+            panelIndex = nextIndex;
+          }
+          const panelObserver = Observer.create({
+            target: window,
+            type: "wheel,touch",
+            preventDefault: true,
+            tolerance: 10,
+            onUp: () => {
+              if (animating) return;
+              if (panelIndex < panels.length - 1) {
+                goToPanel(panelIndex + 1, 1);
+              } else {
+                panelObserver.disable();
+                ScrollLock.unlock();
+                ScrollTrigger2.refresh();
+              }
+            },
+            onDown: () => {
+              if (animating) return;
+              if (panelIndex > 0) {
+                goToPanel(panelIndex - 1, -1);
+              } else {
+                panelObserver.disable();
+                ScrollLock.unlock();
+                ScrollTrigger2.refresh();
+              }
+            }
+          });
+          panelObserver.disable();
           ScrollTrigger2.create({
             trigger: ".landing_main",
-            start: "bottom bottom",
+            start: "bottom top",
             end: `+=${window.innerHeight * 2.5}`,
-            pin: true,
+            pin: ".pinned__canvas",
             scrub: 1,
             onUpdate: (self) => {
               const progress = self.progress;
-              const animationProgress = Math.min(progress / 0.9, 1);
-              const targetFrame = Math.round(animationProgress * (frameCount - 1));
-              videoFrames2.frame = targetFrame;
+              const seqProgress = Math.min(progress / sequenceEnd, 1);
+              videoFrames2.frame = Math.round(seqProgress * (frameCount - 1));
               render3();
+              if (progress >= sequenceEnd && !overlayShown) {
+                overlayShown = true;
+                overlayTl.play();
+              } else if (progress < sequenceEnd && overlayShown) {
+                overlayShown = false;
+                overlayTl.reverse();
+                if (scaleLocked) {
+                  scaleLocked = false;
+                  panelObserver.disable();
+                  ScrollLock.unlock();
+                }
+                gsapWithCSS.set(contentBlock, { opacity: 0, scale: 1.3 });
+              }
+              if (progress > sequenceEnd) {
+                const scaleProgress = gsapWithCSS.utils.clamp(0, 1, (progress - sequenceEnd) / (scaleEnd - sequenceEnd));
+                gsapWithCSS.set(contentBlock, { opacity: scaleProgress, scale: 1.3 - 0.3 * scaleProgress });
+                if (scaleProgress >= 1 && !scaleLocked && isDesktopViewport) {
+                  scaleLocked = true;
+                  ScrollLock.lock();
+                  ScrollTrigger2.refresh();
+                  panelObserver.enable();
+                } else if (scaleProgress < 1 && scaleLocked) {
+                  scaleLocked = false;
+                  panelObserver.disable();
+                  ScrollLock.unlock();
+                  ScrollTrigger2.refresh();
+                }
+              }
             }
           });
         };

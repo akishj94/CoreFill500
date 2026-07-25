@@ -24,9 +24,6 @@ function initLenis(){
     lenis.raf(time * 1000);
     });
     gsap.ticker.lagSmoothing(0);
-
-    ScrollLock.registerLenis(lenis);
-    return lenis;
 }
 const ScrollLock = ( function () {
     let scrollY      = 0;
@@ -195,6 +192,7 @@ function videoFrames() {
         const img = images[videoFrames.frame];
 
         if(img && img.complete && img.naturalWidth > 0){
+            console.log(img.naturalWidth, img.naturalHeight);
             const imageAspect = img.naturalWidth / img.naturalHeight;
             const canvasAspect = canvasWidth /canvasHeight;
             let drawWdith, drawHeight, drawX, drawY;
@@ -216,122 +214,76 @@ function videoFrames() {
         }
     }
 
+
+    // Original Image Aspect Ratio
+    // const render = () => {
+    //     const canvasWidth = window.innerWidth;
+    //     const canvasHeight = window.innerHeight;
+
+    //     context.clearRect(0, 0, canvasWidth, canvasHeight);
+    //     const img = images[videoFrames.frame];
+
+    //     if (img && img.complete && img.naturalWidth > 0) {
+    //         const imageAspect = img.naturalWidth / img.naturalHeight;
+    //         const canvasAspect = canvasWidth / canvasHeight;
+    //         let drawWidth, drawHeight, drawX, drawY;
+
+    //         if (imageAspect > canvasAspect) {
+    //         // image is wider than canvas -> fit to width, letterbox top/bottom
+    //         drawWidth = canvasWidth;
+    //         drawHeight = drawWidth / imageAspect;
+    //         drawX = 0;
+    //         drawY = (canvasHeight - drawHeight) / 2;
+    //         } else {
+    //         // image is taller than canvas -> fit to height, pillarbox left/right
+    //         drawHeight = canvasHeight;
+    //         drawWidth = drawHeight * imageAspect;
+    //         drawX = (canvasWidth - drawWidth) / 2;
+    //         drawY = 0;
+    //         }
+
+    //         context.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+    //     }
+    // };
+    
     const setupScrollTrigger = () => {
-        const contentBlock = document.querySelector('.cotent-block');
-        const fadeOverlay = document.querySelector('.fadeOverlay');
-        const panels = gsap.utils.toArray('.panelWrap .panel');
-        let isDesktopViewport = false;
-        const mm = gsap.matchMedia();
-        mm.add('(min-width: 768px)', () => {
-            isDesktopViewport = true;
-            return () => { isDesktopViewport = false; };
-        });
+    const contentBlock = document.querySelector('.cotent-block');
+    const fadeOverlay = document.querySelector('.fadeOverlay');
 
-        gsap.set(contentBlock, { opacity: 0, scale: 1.3, transformOrigin: 'center center' });
-        gsap.set(fadeOverlay, { opacity: 0 });
+    gsap.set(contentBlock, { opacity: 0, scale: 1.3, transformOrigin: 'center center' });
+    gsap.set(fadeOverlay, { opacity: 0 });
 
-        const sequenceEnd = 0.6; // image sequence finishes here
-        const scaleEnd = 0.85;   // scale-scrub phase finishes here
+    const sequenceEnd = 0.9;
 
-        const overlayTl = gsap.timeline({ paused: true })
-            .to(fadeOverlay, { opacity: 1, duration: 0.6, ease: 'power1.out' });
+    const revealTl = gsap.timeline({ paused: true })
+        .to(fadeOverlay, { opacity: 1, duration: 0.6, ease: 'power1.out' })
+        .to(contentBlock, { opacity: 1, scale: 1, duration: 0.6, ease: 'power2.out' });
 
-        let overlayShown = false;
-        let scaleLocked = false;
-        let panelIndex = 0;
-        let animating = false;
+    let revealed = false;
 
-        function goToPanel(nextIndex, direction) {
-            animating = true;
-            const current = panels[panelIndex];
-            const next = panels[nextIndex];
+    ScrollTrigger.create({
+        trigger: ".landing_main",
+        start: "bottom top",
+        end: `+=${window.innerHeight * 2.5}`,
+        pin: ".pinned__canvas",
+        scrub: 1,
+        onUpdate: (self) => {
+            const progress = self.progress;
 
-            gsap.to(current, { opacity: 0, y: direction === 1 ? -40 : 40, duration: 0.5, ease: 'power2.inOut' });
-            gsap.fromTo(next,
-                { opacity: 0, y: direction === 1 ? 40 : -40 },
-                { opacity: 1, y: 0, duration: 0.5, ease: 'power2.inOut',
-                  onComplete: () => { animating = false; } }
-            );
-            panelIndex = nextIndex;
+            const seqProgress = Math.min(progress / sequenceEnd, 1);
+            videoFrames.frame = Math.round(seqProgress * (frameCount - 1));
+            render();
+
+            if (progress >= sequenceEnd && !revealed) {
+                revealed = true;
+                revealTl.play();
+            } else if (progress < sequenceEnd && revealed) {
+                revealed = false;
+                revealTl.reverse();
+            }
         }
-
-        const panelObserver = Observer.create({
-            target: window,
-            type: 'wheel,touch',
-            preventDefault: true,
-            tolerance: 10,
-            onUp: () => {
-                if (animating) return;
-                if (panelIndex < panels.length - 1) {
-                    goToPanel(panelIndex + 1, 1);
-                } else {
-                    panelObserver.disable();
-                    ScrollLock.unlock();
-                    ScrollTrigger.refresh();
-                }
-            },
-            onDown: () => {
-                if (animating) return;
-                if (panelIndex > 0) {
-                    goToPanel(panelIndex - 1, -1);
-                } else {
-                    panelObserver.disable();
-                    ScrollLock.unlock();
-                    ScrollTrigger.refresh();
-                }
-            }
-        });
-        panelObserver.disable();
-
-        ScrollTrigger.create({
-            trigger: ".landing_main",
-            start: "bottom top",
-            end: `+=${window.innerHeight * 2.5}`,
-            pin: ".pinned__canvas",
-            scrub: 1,
-            onUpdate: (self) => {
-                const progress = self.progress;
-
-                // Phase A — image sequence scrub
-                const seqProgress = Math.min(progress / sequenceEnd, 1);
-                videoFrames.frame = Math.round(seqProgress * (frameCount - 1));
-                render();
-
-                // Phase B1 — fade overlay, automatic + reversible
-                if (progress >= sequenceEnd && !overlayShown) {
-                    overlayShown = true;
-                    overlayTl.play();
-                } else if (progress < sequenceEnd && overlayShown) {
-                    overlayShown = false;
-                    overlayTl.reverse();
-                    if (scaleLocked) {
-                        scaleLocked = false;
-                        panelObserver.disable();
-                        ScrollLock.unlock();
-                    }
-                    gsap.set(contentBlock, { opacity: 0, scale: 1.3 });
-                }
-
-                // Phase B2 — content scale, scrub-based
-                if (progress > sequenceEnd) {
-                    const scaleProgress = gsap.utils.clamp(0, 1, (progress - sequenceEnd) / (scaleEnd - sequenceEnd));
-                    gsap.set(contentBlock, { opacity: scaleProgress, scale: 1.3 - 0.3 * scaleProgress });
-
-                    if (scaleProgress >= 1 && !scaleLocked && isDesktopViewport) {
-                        scaleLocked = true;
-                        ScrollLock.lock();
-                        ScrollTrigger.refresh();
-                        panelObserver.enable();
-                    } else if (scaleProgress < 1 && scaleLocked) {
-                        scaleLocked = false;
-                        panelObserver.disable();
-                        ScrollLock.unlock();
-                        ScrollTrigger.refresh();
-                    }
-                }
-            }
-        });
-    }
+    });
+}
     window.addEventListener("resize", () => {
         setCanvasSize();
         render();
