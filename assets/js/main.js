@@ -12370,12 +12370,11 @@
     "src/js/index.js"() {
       init_gsap();
       init_ScrollTrigger();
-      init_Observer();
       init_lenis();
       init_animations();
       init_swiper();
       init_modules();
-      gsapWithCSS.registerPlugin(ScrollTrigger2, Observer);
+      gsapWithCSS.registerPlugin(ScrollTrigger2);
       function initLenis() {
         const lenis = new Lenis({
           duration: 1.2,
@@ -12477,7 +12476,6 @@
         const frames = document.querySelector("canvas");
         const context3 = frames.getContext("2d");
         const setCanvasSize = () => {
-          console.log("S");
           const pixelRatio = window.devicePixelRatio || 1;
           frames.width = window.innerWidth * pixelRatio;
           frames.height = window.innerHeight * pixelRatio;
@@ -12501,9 +12499,7 @@
         for (let i = 0; i < frameCount; i++) {
           const img = new Image();
           img.onload = onLoad2;
-          img.onerror = function() {
-            onLoad2.call(this);
-          };
+          img.onerror = onLoad2;
           img.src = currentFrame(i);
           images.push(img);
         }
@@ -12544,97 +12540,65 @@
           });
           gsapWithCSS.set(contentBlock, { opacity: 0, scale: 1.3, transformOrigin: "center center" });
           gsapWithCSS.set(fadeOverlay, { opacity: 0 });
-          const sequenceEnd = 0.6;
-          const scaleEnd = 0.85;
+          gsapWithCSS.set(panels, { opacity: 0, y: 40 });
+          gsapWithCSS.set(panels[0], { opacity: 1, y: 0 });
+          const seqDistance = window.innerHeight * 1.8;
+          const revealDistance = window.innerHeight * 0.6;
+          const introDistance = seqDistance + revealDistance;
+          const panelGaps = panels.slice(1).map(() => window.innerHeight * 0.9);
+          const dwellDistance = window.innerHeight * 0.6;
+          const panelBreakpoints = [];
+          let cursor = introDistance;
+          panelGaps.forEach((gap) => {
+            cursor += gap;
+            panelBreakpoints.push(cursor);
+          });
+          const totalDistance = introDistance + panelGaps.reduce((a, b) => a + b, 0) + dwellDistance;
           const overlayTl = gsapWithCSS.timeline({ paused: true }).to(fadeOverlay, { opacity: 1, duration: 0.6, ease: "power1.out" });
           let overlayShown = false;
-          let scaleLocked = false;
           let panelIndex = 0;
-          let animating = false;
           function goToPanel(nextIndex, direction) {
-            animating = true;
             const current = panels[panelIndex];
             const next = panels[nextIndex];
-            gsapWithCSS.to(current, { opacity: 0, y: direction === 1 ? -40 : 40, duration: 0.5, ease: "power2.inOut" });
+            gsapWithCSS.to(current, { opacity: 0, y: direction === 1 ? -70 : 40, duration: 0.5, ease: "power2.inOut", overwrite: true });
             gsapWithCSS.fromTo(
               next,
-              { opacity: 0, y: direction === 1 ? 40 : -40 },
-              {
-                opacity: 1,
-                y: 0,
-                duration: 0.5,
-                ease: "power2.inOut",
-                onComplete: () => {
-                  animating = false;
-                }
-              }
+              { opacity: 0, y: direction === 1 ? 40 : -70, scale: 0.9 },
+              { opacity: 1, y: 0, duration: 0.5, scale: 1, ease: "power2.inOut", overwrite: true }
             );
             panelIndex = nextIndex;
           }
-          const panelObserver = Observer.create({
-            target: window,
-            type: "wheel,touch",
-            preventDefault: true,
-            tolerance: 10,
-            onUp: () => {
-              if (animating) return;
-              if (panelIndex < panels.length - 1) {
-                goToPanel(panelIndex + 1, 1);
-              } else {
-                panelObserver.disable();
-                ScrollLock.unlock();
-                ScrollTrigger2.refresh();
-              }
-            },
-            onDown: () => {
-              if (animating) return;
-              if (panelIndex > 0) {
-                goToPanel(panelIndex - 1, -1);
-              } else {
-                panelObserver.disable();
-                ScrollLock.unlock();
-                ScrollTrigger2.refresh();
-              }
-            }
-          });
-          panelObserver.disable();
           ScrollTrigger2.create({
             trigger: ".landing_main",
             start: "bottom top",
-            end: `+=${window.innerHeight * 2.5}`,
+            end: `+=${totalDistance}`,
             pin: ".pinned__canvas",
             scrub: 1,
             onUpdate: (self) => {
-              const progress = self.progress;
-              const seqProgress = Math.min(progress / sequenceEnd, 1);
+              const distance = self.progress * totalDistance;
+              const seqProgress = Math.min(distance / seqDistance, 1);
               videoFrames2.frame = Math.round(seqProgress * (frameCount - 1));
               render3();
-              if (progress >= sequenceEnd && !overlayShown) {
+              if (distance >= seqDistance && !overlayShown) {
                 overlayShown = true;
                 overlayTl.play();
-              } else if (progress < sequenceEnd && overlayShown) {
+              } else if (distance < seqDistance && overlayShown) {
                 overlayShown = false;
                 overlayTl.reverse();
-                if (scaleLocked) {
-                  scaleLocked = false;
-                  panelObserver.disable();
-                  ScrollLock.unlock();
-                }
                 gsapWithCSS.set(contentBlock, { opacity: 0, scale: 1.3 });
               }
-              if (progress > sequenceEnd) {
-                const scaleProgress = gsapWithCSS.utils.clamp(0, 1, (progress - sequenceEnd) / (scaleEnd - sequenceEnd));
+              if (distance > seqDistance) {
+                const scaleProgress = gsapWithCSS.utils.clamp(0, 1, (distance - seqDistance) / revealDistance);
                 gsapWithCSS.set(contentBlock, { opacity: scaleProgress, scale: 1.3 - 0.3 * scaleProgress });
-                if (scaleProgress >= 1 && !scaleLocked && isDesktopViewport) {
-                  scaleLocked = true;
-                  ScrollLock.lock();
-                  ScrollTrigger2.refresh();
-                  panelObserver.enable();
-                } else if (scaleProgress < 1 && scaleLocked) {
-                  scaleLocked = false;
-                  panelObserver.disable();
-                  ScrollLock.unlock();
-                  ScrollTrigger2.refresh();
+              }
+              if (isDesktopViewport && distance > introDistance && panelBreakpoints.length) {
+                let targetIndex = 0;
+                for (let i = 0; i < panelBreakpoints.length; i++) {
+                  if (distance >= panelBreakpoints[i]) targetIndex = i + 1;
+                }
+                targetIndex = gsapWithCSS.utils.clamp(0, panels.length - 1, targetIndex);
+                if (targetIndex !== panelIndex) {
+                  goToPanel(targetIndex, targetIndex > panelIndex ? 1 : -1);
                 }
               }
             }
@@ -12643,6 +12607,7 @@
         window.addEventListener("resize", () => {
           setCanvasSize();
           render3();
+          ScrollTrigger2.refresh();
         });
       }
       setInitialStates();
@@ -12652,6 +12617,7 @@
         aia_slider();
         initScrollAnimations();
         videoFrames();
+        window.addEventListener("load", () => ScrollTrigger2.refresh());
       });
     }
   });

@@ -1,9 +1,8 @@
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Observer } from 'gsap/Observer';
 import Lenis from 'lenis';
 import { setInitialStates, initScrollAnimations } from './animations';
-gsap.registerPlugin(ScrollTrigger, Observer);
+gsap.registerPlugin(ScrollTrigger);
 
 import Swiper from 'swiper';
 import { Navigation } from 'swiper/modules';
@@ -33,23 +32,12 @@ const ScrollLock = ( function () {
     let lockCount    = 0; // reference count — safe for nested lock calls
     let lenisInstance = null;
 
-    // ── Register Lenis ───────────────────────────────────────────────────────
-
-    /**
-     * Pass your Lenis instance once during init.
-     * ScrollLock will stop/start it automatically.
-     *
-     * @param {object} lenis - Your Lenis instance.
-     */
     function registerLenis( lenis ) {
         lenisInstance = lenis;
     }
 
-    // ── Lock ─────────────────────────────────────────────────────────────────
-
     function lock() {
         lockCount++;
-
         if ( lockCount > 1 ) return; // already locked
 
         if ( lenisInstance ) {
@@ -63,13 +51,9 @@ const ScrollLock = ( function () {
         }
     }
 
-    // ── Unlock ───────────────────────────────────────────────────────────────
-
     function unlock() {
         if ( lockCount <= 0 ) return;
-
         lockCount--;
-
         if ( lockCount > 0 ) return; // something else still needs the lock
 
         if ( lenisInstance ) {
@@ -83,10 +67,7 @@ const ScrollLock = ( function () {
         }
     }
 
-    // ── Public API ────────────────────────────────────────────────────────────
-
     return { registerLenis, lock, unlock };
-
 } )();
 
 
@@ -110,7 +91,6 @@ function hoverFollower() {
             : gsap.set(bg, vars);
     };
 
-    // Initial state
     gsap.set(bg, { top: 0, height: rows[0]?.offsetHeight || 0, opacity: 0 });
 
     rows.forEach((row) => {
@@ -135,8 +115,7 @@ function hoverFollower() {
     });
 }
 
-function aia_slider(){    
-
+function aia_slider(){
     const swiper = new Swiper('.aia_spec .swiper', {
         modules: [Navigation],
         slidesPerView: 'auto',
@@ -144,17 +123,16 @@ function aia_slider(){
         navigation: {
             nextEl: '.swiper-next',
             prevEl: '.swiper-prev',
-        },       
+        },
     });
 }
 
 
-
-function videoFrames() {   
+function videoFrames() {
     const frames = document.querySelector('canvas');
     const context = frames.getContext('2d');
+
     const setCanvasSize = () => {
-        console.log('S');
         const pixelRatio = window.devicePixelRatio || 1;
         frames.width = window.innerWidth * pixelRatio;
         frames.height = window.innerHeight * pixelRatio;
@@ -163,58 +141,58 @@ function videoFrames() {
         context.scale(pixelRatio, pixelRatio);
     };
     setCanvasSize();
+
     const frameCount = 122;
     const currentFrame = (index) =>
-    `assets/sequence/frame_${(index + 1).toString().padStart(4, "0")}.jpeg`;
+        `assets/sequence/frame_${(index + 1).toString().padStart(4, "0")}.jpeg`;
+
     let images = [];
     let videoFrames = { frame: 0 };
     let imagesToLoad = frameCount;
 
     const onLoad = () => {
-    imagesToLoad--;
-
-    if (!imagesToLoad) {
-        render();
-        setupScrollTrigger();
-    }
+        imagesToLoad--;
+        if (!imagesToLoad) {
+            render();
+            setupScrollTrigger();
+        }
     };
+
     for (let i = 0; i < frameCount; i++) {
         const img = new Image();
         img.onload = onLoad;
-        img.onerror = function () {
-            onLoad.call(this);
-        };
+        img.onerror = onLoad;
         img.src = currentFrame(i);
         images.push(img);
     }
-    const render = ()=>{
+
+    const render = () => {
         const canvasWidth = window.innerWidth;
         const canvasHeight = window.innerHeight;
 
         context.clearRect(0, 0, canvasWidth, canvasHeight);
         const img = images[videoFrames.frame];
 
-        if(img && img.complete && img.naturalWidth > 0){
+        if (img && img.complete && img.naturalWidth > 0) {
             const imageAspect = img.naturalWidth / img.naturalHeight;
-            const canvasAspect = canvasWidth /canvasHeight;
+            const canvasAspect = canvasWidth / canvasHeight;
             let drawWdith, drawHeight, drawX, drawY;
 
-            if(imageAspect > canvasAspect){
+            if (imageAspect > canvasAspect) {
                 drawHeight = canvasHeight;
                 drawWdith = drawHeight * imageAspect;
                 drawX = (canvasWidth - drawWdith) / 2;
                 drawY = 0;
-            }
-            else{
+            } else {
                 drawWdith = canvasWidth;
                 drawHeight = drawWdith / imageAspect;
                 drawX = 0;
-                drawY = (canvasHeight - drawHeight) / 2;                
+                drawY = (canvasHeight - drawHeight) / 2;
             }
 
             context.drawImage(img, drawX, drawY, drawWdith, drawHeight);
         }
-    }
+    };
 
     const setupScrollTrigger = () => {
         const contentBlock = document.querySelector('.cotent-block');
@@ -229,104 +207,80 @@ function videoFrames() {
 
         gsap.set(contentBlock, { opacity: 0, scale: 1.3, transformOrigin: 'center center' });
         gsap.set(fadeOverlay, { opacity: 0 });
+        gsap.set(panels, { opacity: 0, y: 40 });
+        gsap.set(panels[0], { opacity: 1, y: 0 });
+        const seqDistance = window.innerHeight * 1.8;      // image sequence — increase/decrease to taste
+        const revealDistance = window.innerHeight * 0.6;   // overlay fade + content scale
+        const introDistance = seqDistance + revealDistance;
 
-        const sequenceEnd = 0.6; // image sequence finishes here
-        const scaleEnd = 0.85;   // scale-scrub phase finishes here
+        // One gap per panel transition (length - 1 gaps for N panels), tune individually.
+        const panelGaps = panels.slice(1).map(() => window.innerHeight * 0.9);
+        const dwellDistance = window.innerHeight * 0.6;
+
+        const panelBreakpoints = [];
+        let cursor = introDistance;
+        panelGaps.forEach(gap => { cursor += gap; panelBreakpoints.push(cursor); });
+
+        const totalDistance = introDistance + panelGaps.reduce((a, b) => a + b, 0) + dwellDistance;
 
         const overlayTl = gsap.timeline({ paused: true })
             .to(fadeOverlay, { opacity: 1, duration: 0.6, ease: 'power1.out' });
 
         let overlayShown = false;
-        let scaleLocked = false;
         let panelIndex = 0;
-        let animating = false;
 
         function goToPanel(nextIndex, direction) {
-            animating = true;
             const current = panels[panelIndex];
             const next = panels[nextIndex];
 
-            gsap.to(current, { opacity: 0, y: direction === 1 ? -40 : 40, duration: 0.5, ease: 'power2.inOut' });
+            gsap.to(current, { opacity: 0, y: direction === 1 ? -70 : 40,  duration: 0.5, ease: 'power2.inOut', overwrite: true });
             gsap.fromTo(next,
-                { opacity: 0, y: direction === 1 ? 40 : -40 },
-                { opacity: 1, y: 0, duration: 0.5, ease: 'power2.inOut',
-                  onComplete: () => { animating = false; } }
+                { opacity: 0, y: direction === 1 ? 40 : -70, scale: 0.9,},
+                { opacity: 1, y: 0, duration: 0.5, scale: 1, ease: 'power2.inOut', overwrite: true }
             );
             panelIndex = nextIndex;
         }
 
-        const panelObserver = Observer.create({
-            target: window,
-            type: 'wheel,touch',
-            preventDefault: true,
-            tolerance: 10,
-            onUp: () => {
-                if (animating) return;
-                if (panelIndex < panels.length - 1) {
-                    goToPanel(panelIndex + 1, 1);
-                } else {
-                    panelObserver.disable();
-                    ScrollLock.unlock();
-                    ScrollTrigger.refresh();
-                }
-            },
-            onDown: () => {
-                if (animating) return;
-                if (panelIndex > 0) {
-                    goToPanel(panelIndex - 1, -1);
-                } else {
-                    panelObserver.disable();
-                    ScrollLock.unlock();
-                    ScrollTrigger.refresh();
-                }
-            }
-        });
-        panelObserver.disable();
-
         ScrollTrigger.create({
             trigger: ".landing_main",
             start: "bottom top",
-            end: `+=${window.innerHeight * 2.5}`,
+            end: `+=${totalDistance}`,
             pin: ".pinned__canvas",
             scrub: 1,
             onUpdate: (self) => {
-                const progress = self.progress;
+                const distance = self.progress * totalDistance;
 
                 // Phase A — image sequence scrub
-                const seqProgress = Math.min(progress / sequenceEnd, 1);
+                const seqProgress = Math.min(distance / seqDistance, 1);
                 videoFrames.frame = Math.round(seqProgress * (frameCount - 1));
                 render();
 
-                // Phase B1 — fade overlay, automatic + reversible
-                if (progress >= sequenceEnd && !overlayShown) {
+                // Phase B1 — fade overlay, gated on sequence completion, reversible
+                if (distance >= seqDistance && !overlayShown) {
                     overlayShown = true;
                     overlayTl.play();
-                } else if (progress < sequenceEnd && overlayShown) {
+                } else if (distance < seqDistance && overlayShown) {
                     overlayShown = false;
                     overlayTl.reverse();
-                    if (scaleLocked) {
-                        scaleLocked = false;
-                        panelObserver.disable();
-                        ScrollLock.unlock();
-                    }
                     gsap.set(contentBlock, { opacity: 0, scale: 1.3 });
                 }
 
                 // Phase B2 — content scale, scrub-based
-                if (progress > sequenceEnd) {
-                    const scaleProgress = gsap.utils.clamp(0, 1, (progress - sequenceEnd) / (scaleEnd - sequenceEnd));
+                if (distance > seqDistance) {
+                    const scaleProgress = gsap.utils.clamp(0, 1, (distance - seqDistance) / revealDistance);
                     gsap.set(contentBlock, { opacity: scaleProgress, scale: 1.3 - 0.3 * scaleProgress });
+                }
 
-                    if (scaleProgress >= 1 && !scaleLocked && isDesktopViewport) {
-                        scaleLocked = true;
-                        ScrollLock.lock();
-                        ScrollTrigger.refresh();
-                        panelObserver.enable();
-                    } else if (scaleProgress < 1 && scaleLocked) {
-                        scaleLocked = false;
-                        panelObserver.disable();
-                        ScrollLock.unlock();
-                        ScrollTrigger.refresh();
+                // Phase C — panels, scrub-driven but discrete (index only changes at each breakpoint)
+                if (isDesktopViewport && distance > introDistance && panelBreakpoints.length) {
+                    let targetIndex = 0;
+                    for (let i = 0; i < panelBreakpoints.length; i++) {
+                        if (distance >= panelBreakpoints[i]) targetIndex = i + 1;
+                    }
+                    targetIndex = gsap.utils.clamp(0, panels.length - 1, targetIndex);
+
+                    if (targetIndex !== panelIndex) {
+                        goToPanel(targetIndex, targetIndex > panelIndex ? 1 : -1);
                     }
                 }
             }
@@ -335,14 +289,16 @@ function videoFrames() {
     window.addEventListener("resize", () => {
         setCanvasSize();
         render();
+        ScrollTrigger.refresh();
     });
 }
 
 setInitialStates();
 document.addEventListener('DOMContentLoaded', ()=>{
-    initLenis();    
+    initLenis();
     hoverFollower();
     aia_slider();
     initScrollAnimations();
     videoFrames();
+    window.addEventListener('load', () => ScrollTrigger.refresh());
 });
