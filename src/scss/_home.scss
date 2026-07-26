@@ -41,10 +41,13 @@ canvas{
     min-height: 100vh;
     display: grid;
     
-    canvas{
-        position: absolute;
-        inset: 0px;
+    .canvasWrap {
+        position: fixed;
+        inset: 0;
+        height: 100vh;
+        width: 100%;
     }
+   
     .fadeOverlay {
         position: absolute;        
         width: 100%;
@@ -59,7 +62,7 @@ canvas{
         pointer-events: none;
         z-index: 1;
     }
-    .canvasWrap, .cotent-block{
+    .cotent-block{
         grid-row: 1/1;
         grid-column: 1/-1;
     }

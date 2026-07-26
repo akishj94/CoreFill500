@@ -12476,6 +12476,7 @@
         const frames = document.querySelector("canvas");
         const context3 = frames.getContext("2d");
         const setCanvasSize = () => {
+          console.log("S");
           const pixelRatio = window.devicePixelRatio || 1;
           frames.width = window.innerWidth * pixelRatio;
           frames.height = window.innerHeight * pixelRatio;
@@ -12499,7 +12500,9 @@
         for (let i = 0; i < frameCount; i++) {
           const img = new Image();
           img.onload = onLoad2;
-          img.onerror = onLoad2;
+          img.onerror = function() {
+            onLoad2.call(this);
+          };
           img.src = currentFrame(i);
           images.push(img);
         }
@@ -12509,6 +12512,7 @@
           context3.clearRect(0, 0, canvasWidth, canvasHeight);
           const img = images[videoFrames2.frame];
           if (img && img.complete && img.naturalWidth > 0) {
+            console.log(img.naturalWidth, img.naturalHeight);
             const imageAspect = img.naturalWidth / img.naturalHeight;
             const canvasAspect = canvasWidth / canvasHeight;
             let drawWdith, drawHeight, drawX, drawY;
@@ -12529,52 +12533,34 @@
         const setupScrollTrigger = () => {
           const contentBlock = document.querySelector(".cotent-block");
           const fadeOverlay = document.querySelector(".fadeOverlay");
-          const panelWrap = document.querySelector(".panelWrap");
-          const panels = gsapWithCSS.utils.toArray(".panelWrap .panel");
-          let isDesktopViewport = false;
-          const mm = gsapWithCSS.matchMedia();
-          mm.add("(min-width: 768px)", () => {
-            isDesktopViewport = true;
-            return () => {
-              isDesktopViewport = false;
-            };
-          });
           gsapWithCSS.set(contentBlock, { opacity: 0, scale: 1.3, transformOrigin: "center center" });
           gsapWithCSS.set(fadeOverlay, { opacity: 0 });
-          const seqDistance = window.innerHeight * 1.8;
-          const revealDistance = window.innerHeight * 0.6;
-          const introDistance = seqDistance + revealDistance;
-          const panelDistance = isDesktopViewport ? 0 : window.innerHeight * (panels.length - 1) * 1.1;
-          const totalDistance = introDistance + panelDistance;
+          const sequenceEnd = 0.9;
+          const scaleEnd = 0.98;
           const overlayTl = gsapWithCSS.timeline({ paused: true }).to(fadeOverlay, { opacity: 1, duration: 0.6, ease: "power1.out" });
           let overlayShown = false;
           ScrollTrigger2.create({
             trigger: ".landing_main",
             start: "bottom top",
-            end: `+=${totalDistance}`,
+            end: `+=${window.innerHeight * 2.5}`,
             pin: ".pinned__canvas",
             scrub: 1,
-            invalidateOnRefresh: true,
             onUpdate: (self) => {
-              const distance = self.progress * totalDistance;
-              const seqProgress = Math.min(distance / seqDistance, 1);
+              const progress = self.progress;
+              const seqProgress = Math.min(progress / sequenceEnd, 1);
               videoFrames2.frame = Math.round(seqProgress * (frameCount - 1));
               render3();
-              if (distance >= seqDistance && !overlayShown) {
+              if (progress >= sequenceEnd && !overlayShown) {
                 overlayShown = true;
                 overlayTl.play();
-              } else if (distance < seqDistance && overlayShown) {
+              } else if (progress < sequenceEnd && overlayShown) {
                 overlayShown = false;
                 overlayTl.reverse();
                 gsapWithCSS.set(contentBlock, { opacity: 0, scale: 1.3 });
               }
-              if (distance > seqDistance) {
-                const scaleProgress = gsapWithCSS.utils.clamp(0, 1, (distance - seqDistance) / revealDistance);
+              if (progress > sequenceEnd) {
+                const scaleProgress = gsapWithCSS.utils.clamp(0, 1, (progress - sequenceEnd) / (scaleEnd - sequenceEnd));
                 gsapWithCSS.set(contentBlock, { opacity: scaleProgress, scale: 1.3 - 0.3 * scaleProgress });
-              }
-              if (!isDesktopViewport && panelDistance > 0 && distance > introDistance) {
-                const panelProgress = gsapWithCSS.utils.clamp(0, 1, (distance - introDistance) / panelDistance);
-                gsapWithCSS.set(panelWrap, { xPercent: -panelProgress * 100 * (panels.length - 1) });
               }
             }
           });
@@ -12582,7 +12568,6 @@
         window.addEventListener("resize", () => {
           setCanvasSize();
           render3();
-          ScrollTrigger2.refresh();
         });
       }
       setInitialStates();
