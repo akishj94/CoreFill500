@@ -197,7 +197,9 @@ function videoFrames() {
     const setupScrollTrigger = () => {
         const contentBlock = document.querySelector('.cotent-block');
         const fadeOverlay = document.querySelector('.fadeOverlay');
+        const panelWrap = document.querySelector('.panelWrap');
         const panels = gsap.utils.toArray('.panelWrap .panel');
+
         let isDesktopViewport = false;
         const mm = gsap.matchMedia();
         mm.add('(min-width: 768px)', () => {
@@ -207,39 +209,21 @@ function videoFrames() {
 
         gsap.set(contentBlock, { opacity: 0, scale: 1.3, transformOrigin: 'center center' });
         gsap.set(fadeOverlay, { opacity: 0 });
-        gsap.set(panels, { opacity: 0, y: 40 });
-        gsap.set(panels[0], { opacity: 1, y: 0 });
+
         const seqDistance = window.innerHeight * 1.8;      // image sequence — increase/decrease to taste
         const revealDistance = window.innerHeight * 0.6;   // overlay fade + content scale
         const introDistance = seqDistance + revealDistance;
 
-        // One gap per panel transition (length - 1 gaps for N panels), tune individually.
-        const panelGaps = panels.slice(1).map(() => window.innerHeight * 0.9);
-        const dwellDistance = window.innerHeight * 0.6;
-
-        const panelBreakpoints = [];
-        let cursor = introDistance;
-        panelGaps.forEach(gap => { cursor += gap; panelBreakpoints.push(cursor); });
-
-        const totalDistance = introDistance + panelGaps.reduce((a, b) => a + b, 0) + dwellDistance;
+        // Mobile only: extra pinned distance reserved for the horizontal panel
+        // scrub. Desktop doesn't reserve any of this — panels there are normal
+        // scrolling flow under a sticky title, so the pin just releases after intro.
+        const panelDistance = isDesktopViewport ? 0 : window.innerHeight * (panels.length - 1) * 1.1;
+        const totalDistance = introDistance + panelDistance;
 
         const overlayTl = gsap.timeline({ paused: true })
             .to(fadeOverlay, { opacity: 1, duration: 0.6, ease: 'power1.out' });
 
         let overlayShown = false;
-        let panelIndex = 0;
-
-        function goToPanel(nextIndex, direction) {
-            const current = panels[panelIndex];
-            const next = panels[nextIndex];
-
-            gsap.to(current, { opacity: 0, y: direction === 1 ? -70 : 40,  duration: 0.5, ease: 'power2.inOut', overwrite: true });
-            gsap.fromTo(next,
-                { opacity: 0, y: direction === 1 ? 40 : -70, scale: 0.9,},
-                { opacity: 1, y: 0, duration: 0.5, scale: 1, ease: 'power2.inOut', overwrite: true }
-            );
-            panelIndex = nextIndex;
-        }
 
         ScrollTrigger.create({
             trigger: ".landing_main",
@@ -247,6 +231,7 @@ function videoFrames() {
             end: `+=${totalDistance}`,
             pin: ".pinned__canvas",
             scrub: 1,
+            invalidateOnRefresh: true,
             onUpdate: (self) => {
                 const distance = self.progress * totalDistance;
 
@@ -271,17 +256,12 @@ function videoFrames() {
                     gsap.set(contentBlock, { opacity: scaleProgress, scale: 1.3 - 0.3 * scaleProgress });
                 }
 
-                // Phase C — panels, scrub-driven but discrete (index only changes at each breakpoint)
-                if (isDesktopViewport && distance > introDistance && panelBreakpoints.length) {
-                    let targetIndex = 0;
-                    for (let i = 0; i < panelBreakpoints.length; i++) {
-                        if (distance >= panelBreakpoints[i]) targetIndex = i + 1;
-                    }
-                    targetIndex = gsap.utils.clamp(0, panels.length - 1, targetIndex);
-
-                    if (targetIndex !== panelIndex) {
-                        goToPanel(targetIndex, targetIndex > panelIndex ? 1 : -1);
-                    }
+                // Phase C — mobile only: vertical scroll drives horizontal panel
+                // position directly, continuous (not stepped). Section stays
+                // pinned the whole time since this consumes real scroll distance.
+                if (!isDesktopViewport && panelDistance > 0 && distance > introDistance) {
+                    const panelProgress = gsap.utils.clamp(0, 1, (distance - introDistance) / panelDistance);
+                    gsap.set(panelWrap, { xPercent: -panelProgress * 100 * (panels.length - 1) });
                 }
             }
         });
