@@ -133,7 +133,7 @@ function videoFrames() {
     const context = frames.getContext('2d');
     const setCanvasSize = () => {
         console.log('S');
-        const pixelRatio = window.devicePixelRatio || 1;
+        const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
         frames.width = window.innerWidth * pixelRatio;
         frames.height = window.innerHeight * pixelRatio;
         frames.style.width = window.innerWidth + "px";
@@ -227,53 +227,129 @@ function videoFrames() {
     //     }
     // };
     
-
     const setupScrollTrigger = () => {
+        const panelTitle = document.querySelector('.panelTitle');
         const contentBlock = document.querySelector('.cotent-block');
+        const panelWrap = document.querySelector('.panelWrap');
+        const panels = gsap.utils.toArray('.panel');
         const fadeOverlay = document.querySelector('.fadeOverlay');
+        const pinnedSection = document.querySelector('.pinned__canvas');
 
-        gsap.set(contentBlock, { opacity: 0, scale: 1.3, transformOrigin: 'center center' });
+        gsap.set(panelTitle, { opacity: 0, scale: 1.3, transformOrigin: 'center center' });
         gsap.set(fadeOverlay, { opacity: 0 });
 
         const sequenceEnd = 0.9;
-        const scaleEnd = 0.98; // scale-scrub phase finishes here — must stay < 1
+        const scaleEnd = 0.98;
 
         const overlayTl = gsap.timeline({ paused: true })
             .to(fadeOverlay, { opacity: 1, duration: 0.6, ease: 'power1.out' });
 
         let overlayShown = false;
 
-        ScrollTrigger.create({
-            trigger: ".landing_main",
-            start: "bottom top",
-            end: `+=${window.innerHeight * 2.5}`,
-            pin: ".pinned__canvas",
-            scrub: 1,
-            onUpdate: (self) => {
-                const progress = self.progress;
+    const updateSequenceAndTitle = (progress) => {
+        const seqProgress = Math.min(progress / sequenceEnd, 1);
+        videoFrames.frame = Math.round(seqProgress * (frameCount - 1));
+        render();
 
-                const seqProgress = Math.min(progress / sequenceEnd, 1);
-                videoFrames.frame = Math.round(seqProgress * (frameCount - 1));
-                render();
+        if (progress >= sequenceEnd && !overlayShown) {
+            overlayShown = true;
+            overlayTl.play();
+        } else if (progress < sequenceEnd && overlayShown) {
+            overlayShown = false;
+            overlayTl.reverse();
+            gsap.set(panelTitle, { opacity: 0, scale: 1.3 });
+        }
 
-                // Overlay — triggered once, not scrubbed, reversible
-                if (progress >= sequenceEnd && !overlayShown) {
-                    overlayShown = true;
-                    overlayTl.play();
-                } else if (progress < sequenceEnd && overlayShown) {
-                    overlayShown = false;
-                    overlayTl.reverse();
-                    gsap.set(contentBlock, { opacity: 0, scale: 1.3 });
-                }
+        if (progress > sequenceEnd) {
+            const p = gsap.utils.clamp(0, 1, (progress - sequenceEnd) / (scaleEnd - sequenceEnd));
+            gsap.set(panelTitle, { opacity: p, scale: 1.3 - 0.3 * p });
+        }
+    };
 
-                // Content scale — continuous scrub, gated on sequence completion
-                if (progress > sequenceEnd) {
-                    const scaleProgress = gsap.utils.clamp(0, 1, (progress - sequenceEnd) / (scaleEnd - sequenceEnd));
-                    gsap.set(contentBlock, { opacity: scaleProgress, scale: 1.3 - 0.3 * scaleProgress });
-                }
+    gsap.matchMedia().add(
+        { isMobile: "(max-width: 767px)", isDesktop: "(min-width: 768px)" },
+        (context) => {
+            if (context.conditions.isMobile) {
+                gsap.set(panelWrap, { x: 0 });
+                gsap.set(panels, { opacity: 0 }); // hidden until title reveal completes
+
+                const sequencePortion = window.innerHeight * 2.5;
+                const scrollDistance = () => panelWrap.scrollWidth - contentBlock.offsetWidth;
+                const totalDistance = () => sequencePortion + scrollDistance() + window.innerHeight;
+                const seqFraction = () => sequencePortion / totalDistance();
+
+                let panelsRevealed = false;
+
+                const st = ScrollTrigger.create({
+                    trigger: ".landing_main",
+                    start: "bottom top",
+                    end: () => `+=${totalDistance()}`,
+                    pin: pinnedSection,
+                    scrub: 1,
+                    invalidateOnRefresh: true,
+                    onUpdate: (self) => {
+                        const progress = self.progress;
+                        const fraction = seqFraction();
+
+                        if (progress <= fraction) {
+                            updateSequenceAndTitle(progress / fraction);
+                            gsap.set(panelWrap, { x: 0 });
+
+                            if (panelsRevealed) {
+                                panelsRevealed = false;
+                                gsap.to(panels, { opacity: 0, duration: 0.3, overwrite: 'auto' });
+                            }
+                        } else {
+                            updateSequenceAndTitle(1);
+
+                            if (!panelsRevealed) {
+                                panelsRevealed = true;
+                                gsap.to(panels, { opacity: 1, duration: 0.4, ease: 'power1.out', overwrite: 'auto' });
+                            }
+
+                            const hProgress = (progress - fraction) / (1 - fraction);
+                            gsap.set(panelWrap, { x: -scrollDistance() * hProgress });
+                        }
+                    }
+                });
+                return () => st.kill();
             }
-        });
-    }
+
+            // Desktop: sequence + title runs unpinned, panels fade in independently
+            const sequenceST = ScrollTrigger.create({
+                trigger: ".landing_main",
+                start: "bottom top",
+                end: `+=${window.innerHeight * 2.5}`,
+                scrub: 1,
+                invalidateOnRefresh: true,
+                onUpdate: (self) => updateSequenceAndTitle(self.progress)
+            });
+
+            gsap.set(panels, { opacity: 0, scale: 0.95 });
+            panels.forEach((panel) => {
+                gsap.to(panel, {
+                    opacity: 1,
+                    scale: 1,
+                    duration: 0.5,
+                    ease: 'power1.out',
+                    scrollTrigger: {
+                        trigger: panel,
+                        start: "top 60%",
+                        toggleActions: "play none none reverse"
+                    }
+                });
+            });
+
+            return () => {
+                sequenceST.kill();
+                ScrollTrigger.getAll()
+                    .filter(st => panels.includes(st.trigger))
+                    .forEach(st => st.kill());
+            };
+        }
+    );
+};
+
     window.addEventListener("resize", () => {
         setCanvasSize();
         render();

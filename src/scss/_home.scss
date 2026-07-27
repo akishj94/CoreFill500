@@ -37,17 +37,30 @@ canvas{
     height: 100vh;
 }
 .pinned__canvas{
-    position: relative;
+    position: static;
     min-height: 100vh;
+    overflow: visible;
     display: grid;
-    
     .canvasWrap {
-        position: fixed;
-        inset: 0;
+        position: relative;
+        top: 0;
         height: 100vh;
         width: 100%;
+        display: grid;
+        .container{
+            position: relative;
+            margin-block: 0;
+            display: grid;
+        }
+        .container, canvas{
+            grid-row: 1/1;
+            grid-column: 1/-1;
+        }
     }
-   
+    .spacer{
+        display: none;
+        padding-block-end: clamp(1000px, 200vh, 200vh);
+    }
     .fadeOverlay {
         position: absolute;        
         width: 100%;
@@ -62,9 +75,14 @@ canvas{
         pointer-events: none;
         z-index: 1;
     }
-    .cotent-block{
+    .cotent-block, .canvasWrap{
         grid-row: 1/1;
         grid-column: 1/-1;
+    }
+    .panelTitle{
+        @include fluid(padding-block-start, 100px, 144px);
+        @include fluid(padding-block-end, 24px, 56px);
+        z-index: 3;
     }
     .cotent-block{
         position: relative;
@@ -74,16 +92,12 @@ canvas{
             height: 100%;            
             @include fluid(padding-block-end, 24px, 56px);
             gap: 40px;    
-            .panelTitle{
-                @include fluid(padding-block-start, 100px, 144px);
-                @include fluid(padding-block-end, 24px, 56px);
-            }
+            
         }
         h2{
             text-align: center;
             margin: 0px;
-            // align-self: end;
-        }
+        }        
     }
     .panelWrap{
         flex-wrap: nowrap;
@@ -91,11 +105,11 @@ canvas{
         gap: clamp(1rem, 1rem + 8 * (100vw - 375px) / 1065, 1.5rem);
         align-self: end;
         min-width: 0;
+        align-items: end;
         .panel{
             @include fluid(padding-inline, 24px, 54px);
             @include fluid(padding-block, 18px, 41px);
             background-color: #fff;
-            // font-weight: normal;
             @include fluid(gap, 24px, 66px);
             flex: 0 0 100%;
             height: auto;
@@ -115,24 +129,33 @@ canvas{
     }
 
     @include bp('md'){
+        display: block;
+        .canvasWrap{
+            position: sticky;
+        }
+        .spacer{
+            display: block;
+        }
+        .panelTitle{
+            align-self: end;
+        }
         .cotent-block{
-            
+            padding-block-start: 20rem;
             & > .grid{
                 @include fluid(gap, 50px, 140px);
                 align-items: unset;
                 align-content: unset;
             }
-            .panelTitle{
-                display: flex;
-                align-items: end;
-                align-content: end;
-                height: 100vh;
-            }
+            
+            
             h2{
                 text-align: left;
                 align-self: end;
                 
                 grid-column: 1/-1;
+            }
+            .spacer{
+                padding-block-end: clamp(500px, 60vh, 60vh);
             }
         }
         .panelWrap{
@@ -140,8 +163,19 @@ canvas{
             scroll-snap-type: none;
             align-self: center;
             display: grid;
-            
+            gap: 30vh;
             .panel{
+                max-width: max(700px, 40vw);
+                &:nth-child(1){
+                    margin-inline-end: 5vw;
+                    justify-self: end;
+                }
+                &:nth-child(2){
+                    margin-inline: auto;
+                }
+                &:nth-child(3){
+                    justify-self: end;
+                }
                 .iconImg{
                     img, svg{
                         max-width: rem(82px);
