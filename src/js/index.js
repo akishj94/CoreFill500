@@ -127,12 +127,217 @@ function aia_slider(){
     });
 }
 
+function interactiveMedia() {
+
+    const section = document.querySelector(".interactive_media_sec");
+
+    if (!section) return;
+
+    const image = section.querySelector(".interactive-image");
+    const overlay = section.querySelector(".interactive-overlay");
+    const hotspots = [...section.querySelectorAll(".hotspot")];
+    const items = section.querySelectorAll(".interactive_content li span.text");
+    const overlayItems = section.querySelectorAll('.media__overlay')
+
+    const zooms = [
+        {
+            scale: 2.2,
+            x: -120,
+            y: -40
+        },
+        {
+            scale: 2.8,
+            x: -420,
+            y: -180
+        },
+        {
+            scale: 3,
+            x: -430,
+            y: -380
+        }
+    ];
+
+    let active = -1;
+
+    function startPulse(hotspot) {
+
+        const pulse = hotspot.querySelector(".pulse");
+
+        gsap.killTweensOf(pulse);
+
+        gsap.fromTo(
+            pulse,
+            {
+                scale: 1,
+                opacity: 0.35,
+                transformOrigin: "center center"
+            },
+            {
+                scale: 1.45,
+                opacity: 0,
+                duration: 1.4,
+                ease: "power1.out",
+                repeat: -1
+            }
+        );
+
+    }
+
+    hotspots.forEach(startPulse);
+
+    function reset() {
+
+        active = -1;
+
+        hotspots.forEach(h => {
+            h.classList.remove("active");
+            startPulse(h);
+        });
+
+        gsap.to(image, {
+            scale: 1,
+            x: 0,
+            y: 0,
+            duration: 0.8,
+            ease: "power3.inOut"
+        });
+
+        gsap.to(overlay, {
+            opacity: 1,
+            duration: 0.3,
+            pointerEvents: "auto"
+        });
+
+        gsap.to(items, {
+            opacity: 0.35,
+            duration: 0.3
+        });
+
+        gsap.to(overlayItems, {
+            opacity: 0,
+            duration: 0.3
+        })
+
+    }
+
+    function activate(index) {
+
+    active = index;
+
+    hotspots.forEach((hotspot, i) => {
+
+        hotspot.classList.toggle("active", i === index);
+
+        const pulse = hotspot.querySelector(".pulse");
+
+        if (i === index) {
+            gsap.killTweensOf(pulse);
+            gsap.set(pulse, {
+                scale: 1,
+                opacity: .35
+            });
+        } else {
+            startPulse(hotspot);
+        }
+
+    });
+
+    items.forEach((item, i) => {
+        gsap.to(item, {
+            opacity: i === index ? 1 : .35,
+            duration: .3
+        });
+    });
+    overlayItems.forEach((item, i) => {
+        gsap.to(item, {
+            opacity: i === index ? 1 : 0,
+            duration: .3
+        });
+    });
+
+    const hotspot = hotspots[index];
+
+    // Position of hotspot in SVG coordinates
+    const svgPoint = hotspot.transform.baseVal.getItem(0);
+
+    const hx = svgPoint.matrix.e;
+    const hy = svgPoint.matrix.f;
+
+    // Image dimensions
+    const width = image.clientWidth;
+    const height = image.clientHeight;
+
+    // SVG viewBox
+    const viewBox = overlay.viewBox.baseVal;
+
+    // Convert SVG coords to image pixels
+    const px = hx / viewBox.width * width;
+    const py = hy / viewBox.height * height;
+
+    const scale = zooms[index].scale;
+
+    // Center hotspot in container
+    const x = width / 2 - px * scale;
+    const y = height / 2 - py * scale;
+
+    gsap.to(image, {
+        scale,
+        x,
+        y,
+        duration: 1,
+        ease: "power3.inOut"
+    });
+
+    gsap.to(overlay, {
+        opacity: 0,
+        pointerEvents: "none",
+        duration: .3
+    });
+
+}
+
+    hotspots.forEach(hotspot => {
+
+        hotspot.addEventListener("click", (e) => {
+
+            e.stopPropagation();
+
+            const index = Number(hotspot.dataset.index);
+
+            if (index === active) {
+                reset();
+            } else {
+                activate(index);
+            }
+
+        });
+
+    });
+
+    document.addEventListener("click", () => {
+
+        if (active !== -1) {
+            reset();
+        }
+
+    });
+
+    ScrollTrigger.addEventListener("refresh", () => {
+        // if (active !== -1) {
+        //     activate(active, true);
+        // }
+        if (active !== -1) {
+            reset();
+        }
+    });
+
+}
+
 
 function videoFrames() {   
     const frames = document.querySelector('canvas');
     const context = frames.getContext('2d');
     const setCanvasSize = () => {
-        console.log('S');
         const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
         frames.width = window.innerWidth * pixelRatio;
         frames.height = window.innerHeight * pixelRatio;
@@ -359,9 +564,10 @@ function videoFrames() {
 setInitialStates();
 document.addEventListener('DOMContentLoaded', ()=>{
     initLenis();
-    hoverFollower();
+    // hoverFollower();
     aia_slider();
     initScrollAnimations();
     videoFrames();
+    interactiveMedia();
     window.addEventListener('load', () => ScrollTrigger.refresh());
 });

@@ -206,6 +206,56 @@ canvas{
         @include bp('lg'){
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
+        .media_block{
+            display: flex;
+            align-items: center;
+            align-content: center;
+            justify-content: center;
+            position:relative;
+            overflow:hidden;
+            img{
+                display: block;
+                width: 100%;
+                transform-origin: 0 0;
+                will-change:transform;
+            }
+            .interactive-overlay{
+                position:absolute;
+                inset:0;
+                width:100%;
+                height:100%;
+                .hotspot{
+                    fill:#970721;
+                    cursor:pointer;
+                    transition: .3s;                    
+                    .pulse{
+                        opacity: .35;
+                        transform-origin: center;
+                    }
+                    .dot{
+                        fill: #970721;
+                    }
+                }                
+            }
+            .media__overlay{
+                position: absolute;
+                width: max-content;
+                z-index: 2;
+                display: grid;
+                max-width: calc(100% - 30px);
+                margin: auto;
+                bottom: 30px;
+                background-color: rgba(151, 7, 33, 1);
+                @include fluid-type(18px, 28px, 768px, 1368px);
+                padding: 10px;
+                color: white;
+                border-radius: calc($border-radius / 2);
+                opacity: 0;
+                @include bp('lg'){
+                    display: none;
+                }
+            }
+        }
         .content-block{
             @include fluid(padding-block-start, 72px, 102px);
             @include fluid(padding-block-end, 54px, 82px);
@@ -433,9 +483,23 @@ canvas{
             @include fluid(gap, 16px, 30px);
             position: relative;
             z-index: 1;
+            &:after{
+                content: '';
+                width: 100%;
+                height: 0px;
+                background-color: $color-primary;
+                position: absolute;
+                bottom: 0px;
+                left: 0px;
+                z-index: -1;
+                transition: 0.35s ease height;
+            }
             &:hover{
                 color: white;
                 border-color: $color-primary;
+                &:after{
+                    height: 100%;
+                }
                 .dwnld_extension, .dwnld_icon{
                     color: white;
                 }
