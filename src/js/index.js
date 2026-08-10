@@ -5,7 +5,7 @@ import { setInitialStates, initScrollAnimations } from './animations';
 gsap.registerPlugin(ScrollTrigger);
 
 import Swiper from 'swiper';
-import { Navigation } from 'swiper/modules';
+import { EffectFade, Autoplay, Navigation } from 'swiper/modules';
 // import Swiper and modules styles
 
 function initLenis(){
@@ -115,7 +115,7 @@ function hoverFollower() {
     });
 }
 
-function aia_slider(){
+function swiperSliders(){
     const swiper = new Swiper('.aia_spec .swiper', {
         modules: [Navigation],
         slidesPerView: 'auto',
@@ -124,6 +124,19 @@ function aia_slider(){
             nextEl: '.swiper-next',
             prevEl: '.swiper-prev',
         },
+    });
+    const wall_systems_slider = new Swiper('.wall_systems_slider', {
+        modules: [Navigation],
+        slidesPerView: 'auto',
+        spaceBetween: 20,
+        breakpoints: {
+        768: {
+            spaceBetween: 40,
+        },
+        1024: {
+            spaceBetween: 70,
+        },
+    },
     });
 }
 
@@ -561,13 +574,100 @@ function videoFrames() {
     });
 }
 
+function coreSwiper_custom(){
+    const heroEl = document.querySelector('.home_slider_xl .swiper');
+  if (!heroEl) return;
+
+  const counterMask = heroEl.querySelector('.counter-mask');
+  const pad = (n) => String(n).padStart(2, '0');
+
+  let counterTween = null;
+  let pendingOldNode = null;
+
+  function animateIn(slideEl) {
+    if (!slideEl) return;
+    const img = slideEl.querySelector('.sliderMedia img');
+    const masks = slideEl.querySelectorAll('.mask > *');
+
+    gsap.killTweensOf(img);
+    gsap.killTweensOf(masks);
+    gsap.set(masks, { opacity: 1 });
+
+    gsap.fromTo(img,
+      { scale: 1.15 },
+      { scale: 1, duration: 1.8, ease: 'power2.out' }
+    );
+    gsap.fromTo(masks,
+      { yPercent: 0, opacity: 0 },
+      { yPercent: 0, opacity: 1, duration: 1, ease: 'power3.out', stagger: 0.08, delay: 0.15 }
+    );
+  }
+
+  function animateOut(slideEl) {
+    if (!slideEl) return;
+    const masks = slideEl.querySelectorAll('.mask > *');
+    gsap.killTweensOf(masks);
+    gsap.to(masks, { opacity: 0, duration: 0.4, ease: 'power2.in' });
+  }
+
+  function updateCounter(num) {
+  if (!counterMask) return;
+  const text = pad(num);
+
+  // Full stop: kill every tween touching this mask before touching anything
+  const existing = counterMask.querySelectorAll('.counter-num');
+  gsap.killTweensOf(existing);
+
+  // Collapse to one authoritative node — whatever survives becomes "current".
+  // This makes the function correct regardless of how many prior calls
+  // were interrupted mid-flight.
+  const current = existing[existing.length - 1];
+  existing.forEach((node) => { if (node !== current) node.remove(); });
+  gsap.set(current, { yPercent: 0 });
+
+  if (current.textContent === text) return; // already showing this number
+
+  const next = current.cloneNode(true);
+  next.textContent = text;
+  gsap.set(next, { yPercent: 100 });
+  counterMask.appendChild(next);
+
+  gsap.timeline({ onComplete: () => current.remove() })
+    .to(current, { yPercent: -100, duration: 0.6, ease: 'power3.inOut' }, 0)
+    .to(next, { yPercent: 0, duration: 0.6, ease: 'power3.inOut' }, 0);
+}
+
+  const swiper = new Swiper(heroEl, {
+    modules: [EffectFade, Autoplay, Navigation],
+    effect: 'fade',
+    fadeEffect: { crossFade: false },
+    speed: 900,
+    loop: true,
+    autoplay: { delay: 5500, disableOnInteraction: false },
+    navigation: { nextEl: '.swiper-next', prevEl: '.swiper-prev' },
+    on: {
+      slideChangeTransitionStart(sw) {
+        animateOut(sw.slides[sw.previousIndex]);
+        animateIn(sw.slides[sw.activeIndex]);
+        updateCounter(sw.realIndex + 1);
+      },
+      init(sw) {
+        animateIn(sw.slides[sw.activeIndex]);
+        updateCounter(sw.realIndex + 1);
+      }
+    }
+  });
+
+}
+
 setInitialStates();
 document.addEventListener('DOMContentLoaded', ()=>{
     initLenis();
     // hoverFollower();
-    aia_slider();
+    swiperSliders();
     initScrollAnimations();
     videoFrames();
     interactiveMedia();
+    coreSwiper_custom();
     window.addEventListener('load', () => ScrollTrigger.refresh());
 });
