@@ -13095,13 +13095,20 @@
       function videoFrames() {
         const frames = document.querySelector("canvas");
         const context3 = frames.getContext("2d");
+        const canvasBox = () => ({
+          width: frames.clientWidth || window.innerWidth,
+          height: frames.clientHeight || window.innerHeight
+        });
         const setCanvasSize = () => {
+          const { width, height } = canvasBox();
           const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-          frames.width = window.innerWidth * pixelRatio;
-          frames.height = window.innerHeight * pixelRatio;
-          frames.style.width = window.innerWidth + "px";
-          frames.style.height = window.innerHeight + "px";
-          context3.scale(pixelRatio, pixelRatio);
+          const backingWidth = Math.round(width * pixelRatio);
+          const backingHeight = Math.round(height * pixelRatio);
+          if (frames.width === backingWidth && frames.height === backingHeight) return false;
+          frames.width = backingWidth;
+          frames.height = backingHeight;
+          context3.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+          return true;
         };
         setCanvasSize();
         const frameCount = 122;
@@ -13109,8 +13116,13 @@
         let images = [];
         let videoFrames2 = { frame: 0 };
         let imagesToLoad = frameCount;
+        let firstFramePainted = false;
         const onLoad2 = () => {
           imagesToLoad--;
+          if (!firstFramePainted && images[0].complete && images[0].naturalWidth > 0) {
+            firstFramePainted = true;
+            render3();
+          }
           if (!imagesToLoad) {
             render3();
             setupScrollTrigger();
@@ -13126,27 +13138,25 @@
           images.push(img);
         }
         const render3 = () => {
-          const canvasWidth = window.innerWidth;
-          const canvasHeight = window.innerHeight;
+          const { width: canvasWidth, height: canvasHeight } = canvasBox();
           context3.clearRect(0, 0, canvasWidth, canvasHeight);
           const img = images[videoFrames2.frame];
           if (img && img.complete && img.naturalWidth > 0) {
-            console.log(img.naturalWidth, img.naturalHeight);
             const imageAspect = img.naturalWidth / img.naturalHeight;
             const canvasAspect = canvasWidth / canvasHeight;
-            let drawWdith, drawHeight, drawX, drawY;
+            let drawWidth, drawHeight, drawX, drawY;
             if (imageAspect > canvasAspect) {
               drawHeight = canvasHeight;
-              drawWdith = drawHeight * imageAspect;
-              drawX = (canvasWidth - drawWdith) / 2;
+              drawWidth = drawHeight * imageAspect;
+              drawX = (canvasWidth - drawWidth) / 2;
               drawY = 0;
             } else {
-              drawWdith = canvasWidth;
-              drawHeight = drawWdith / imageAspect;
+              drawWidth = canvasWidth;
+              drawHeight = drawWidth / imageAspect;
               drawX = 0;
               drawY = (canvasHeight - drawHeight) / 2;
             }
-            context3.drawImage(img, drawX, drawY, drawWdith, drawHeight);
+            context3.drawImage(img, drawX, drawY, drawWidth, drawHeight);
           }
         };
         const setupScrollTrigger = () => {
@@ -13185,16 +13195,22 @@
               if (context4.conditions.isMobile) {
                 gsapWithCSS.set(panelWrap, { x: 0 });
                 gsapWithCSS.set(panels, { opacity: 0 });
-                const sequencePortion = window.innerHeight * 2.5;
+                const sequencePortion = () => window.innerHeight * 2.5;
                 const scrollDistance = () => panelWrap.scrollWidth - contentBlock.offsetWidth;
-                const totalDistance = () => sequencePortion + scrollDistance() + window.innerHeight;
-                const seqFraction = () => sequencePortion / totalDistance();
+                const totalDistance = () => sequencePortion() + scrollDistance() + window.innerHeight;
+                const seqFraction = () => sequencePortion() / totalDistance();
                 let panelsRevealed = false;
                 const st = ScrollTrigger2.create({
                   trigger: ".landing_main",
                   start: "bottom top",
                   end: () => `+=${totalDistance()}`,
                   pin: pinnedSection,
+                  // Touch browsers (iOS especially) repaint position:fixed elements
+                  // unreliably during native momentum scrolling, which froze/smeared
+                  // the canvas mid-sequence. Transform pinning keeps the pinned
+                  // section in the normal document flow, so it repaints every frame.
+                  pinType: ScrollTrigger2.isTouch === 1 ? "transform" : "fixed",
+                  anticipatePin: 1,
                   scrub: 1,
                   invalidateOnRefresh: true,
                   onUpdate: (self) => {
@@ -13249,10 +13265,20 @@
             }
           );
         };
-        window.addEventListener("resize", () => {
-          setCanvasSize();
-          render3();
-        });
+        if (typeof ResizeObserver !== "undefined") {
+          new ResizeObserver(() => {
+            if (setCanvasSize()) render3();
+          }).observe(frames);
+        }
+        let resizeTimer = null;
+        const onViewportResize = () => {
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(() => {
+            if (setCanvasSize()) render3();
+          }, 200);
+        };
+        window.addEventListener("resize", onViewportResize);
+        window.addEventListener("orientationchange", onViewportResize);
       }
       function coreSwiper_custom() {
         const heroEl = document.querySelector(".home_slider_xl .swiper");

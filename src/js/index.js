@@ -350,13 +350,28 @@ function interactiveMedia() {
 function videoFrames() {   
     const frames = document.querySelector('canvas');
     const context = frames.getContext('2d');
+    // Measure the canvas element itself (CSS stretches it over .canvasWrap) instead
+    // of window.innerWidth/innerHeight. On mobile those drift apart: 100vh is the
+    // large viewport while window.innerHeight shrinks when the URL bar is visible,
+    // which left a blank band at the bottom and forced canvas reallocs mid-scroll.
+    const canvasBox = () => ({
+        width: frames.clientWidth || window.innerWidth,
+        height: frames.clientHeight || window.innerHeight
+    });
+    // Returns true when the backing store was actually resized (resizing clears it).
     const setCanvasSize = () => {
+        const { width, height } = canvasBox();
         const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-        frames.width = window.innerWidth * pixelRatio;
-        frames.height = window.innerHeight * pixelRatio;
-        frames.style.width = window.innerWidth + "px";
-        frames.style.height = window.innerHeight + "px";
-        context.scale(pixelRatio, pixelRatio);
+        const backingWidth = Math.round(width * pixelRatio);
+        const backingHeight = Math.round(height * pixelRatio);
+        // Skip redundant resizes — mobile browsers fire resize whenever the URL bar
+        // shows/hides; reallocating then wipes the canvas and makes the sequence jump.
+        if (frames.width === backingWidth && frames.height === backingHeight) return false;
+        frames.width = backingWidth;
+        frames.height = backingHeight;
+        // setTransform is idempotent (scale() would compound across repeated calls).
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        return true;
     };
     setCanvasSize();
     const frameCount = 122;
